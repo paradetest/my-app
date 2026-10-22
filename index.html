@@ -38,6 +38,8 @@
     border-radius: 10px; padding: 12px; width: 100%; outline: none; }
   input:focus, textarea:focus { border-color: var(--accent); }
   textarea { resize: vertical; min-height: 70px; }
+  /* 비밀번호 칸: type=password는 iOS에서 영문 키보드로 고정되므로 글자만 가림 */
+  .masked { -webkit-text-security: disc; text-security: disc; }
   .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; }
   .btn.ghost { background: var(--input); color: var(--text); }
   .btn.danger { background: transparent; color: var(--danger); }
@@ -178,7 +180,7 @@
       <div class="with-btns"><input id="fUser" autocomplete="off" autocapitalize="off" spellcheck="false">
         <button type="button" class="chip" data-copy="fUser">복사</button></div></div>
     <div class="field"><label for="fPw">비밀번호</label>
-      <div class="with-btns"><input id="fPw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div class="with-btns"><input id="fPw" type="text" class="masked" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
         <button type="button" class="chip" id="convertPw">변환</button>
         <button type="button" class="chip" id="togglePw">보기</button>
         <button type="button" class="chip" data-copy="fPw">복사</button></div></div>
@@ -424,7 +426,7 @@ function openEditor(id, draft) {
   $('editTitle').textContent = id ? '계정 편집' : '새 계정';
   $('fName').value = it.name; $('fUrl').value = it.url; $('fUser').value = it.user;
   $('fPw').value = it.pw; $('fMemo').value = it.memo;
-  $('fPw').type = 'password'; $('togglePw').textContent = '보기';
+  setPwVisible(false);
   $('deleteBtn').classList.toggle('hidden', !id);
   updateEditFav(it);
   showUrl(id && !draft ? it.url : '');
@@ -453,10 +455,13 @@ $('deleteBtn').onclick = async () => {
   await persist();
   $('editor').close(); render(); toast('삭제했습니다');
 };
+function setPwVisible(on) {
+  $('fPw').classList.toggle('masked', !on);
+  $('togglePw').textContent = on ? '숨김' : '보기';
+}
 $('togglePw').onclick = () => {
-  const show = $('fPw').type === 'password';
-  $('fPw').type = show ? 'text' : 'password';
-  $('togglePw').textContent = show ? '숨김' : '보기';
+  const show = $('fPw').classList.contains('masked');
+  setPwVisible(show);
 };
 
 // ---------- URL ----------
@@ -493,7 +498,7 @@ $('convertPw').onclick = () => {
   const v = $('fPw').value, c = hangulToKeys(v);
   if (c === v) return toast('변환할 한글이 없습니다');
   $('fPw').value = c;
-  $('fPw').type = 'text'; $('togglePw').textContent = '숨김';
+  setPwVisible(true);
   toast('영문 자판으로 변환했습니다');
 };
 
