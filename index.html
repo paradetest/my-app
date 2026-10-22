@@ -54,6 +54,8 @@
     font-size: 24px; letter-spacing: .5em; text-indent: .5em; }
   .gate input::placeholder { font-size: 16px; letter-spacing: normal; }
   .err { color: var(--danger); font-size: 14px; min-height: 20px; margin: 4px 0 10px; }
+  .help { color: var(--sub); font-size: 13px; margin: 0 4px 10px; }
+  .help code { color: var(--text); background: var(--input); padding: 1px 5px; border-radius: 5px; }
   .hint { background: var(--card); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--sub); margin-top: 22px; text-align: left; }
 
   /* 메인 */
@@ -198,6 +200,7 @@
     </div>
     <div class="menu">
       <button id="exportBtn">백업 파일 내보내기 <small>암호화됨</small></button>
+      <button id="csvBtn">계정 한꺼번에 넣기 <small>메모·엑셀</small></button>
       <button id="importBtn">백업 파일 가져오기</button>
       <button id="changePwBtn">비밀번호 변경</button>
     </div>
@@ -207,6 +210,25 @@
     <p style="color:var(--sub);font-size:12px;margin:0 4px">파비콘을 표시하면 사이트 도메인 이름이 아이콘 서비스(DuckDuckGo, Google)로 전송됩니다. ID와 비밀번호는 어디로도 전송되지 않습니다.</p>
     <input type="file" id="importFile" accept=".json,application/json" class="hidden">
   </div>
+</dialog>
+
+<!-- 계정 한꺼번에 넣기 -->
+<dialog id="csvDialog">
+  <form class="sheet" id="csvForm" method="dialog">
+    <div class="sheet-head">
+      <button type="button" data-close>취소</button>
+      <h2>계정 한꺼번에 넣기</h2>
+      <button type="submit" class="save">가져오기</button>
+    </div>
+    <p class="help">한 줄에 계정 하나씩, 쉼표로 구분해서 붙여넣으세요.<br>
+      순서: <code>사이트명, URL, ID, 비밀번호, 메모</code><br>
+      비밀번호에 쉼표가 있으면 큰따옴표로 감싸세요. 예: <code>"ab,12"</code></p>
+    <textarea id="csvText" rows="8" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
+      placeholder="네이버, naver.com, myid, 비밀번호123&#10;카카오, kakao.com, me@kakao.com, pass456, 메모"></textarea>
+    <div class="err" id="csvErr"></div>
+    <button type="button" class="btn ghost" id="csvFileBtn">CSV 파일 선택</button>
+    <input type="file" id="csvFile" accept=".csv,.txt,text/csv,text/plain" class="hidden">
+  </form>
 </dialog>
 
 <!-- 비밀번호 입력 -->
@@ -557,6 +579,83 @@ function askPassword(title, { confirm2 = false, placeholder = '비밀번호' } =
     d.showModal(); $('pwA').focus();
   });
 }
+
+// ---------- 계정 한꺼번에 넣기 (CSV / 붙여넣기) ----------
+function parseCsv(text) {
+  text = text.replace(/^\uFEFF/, '');
+  const delim = text.split(/\r?\n/, 1)[0].includes('\t') ? '\t' : ',';  // 엑셀에서 복사하면 탭 구분
+  const rows = [];
+  let row = [], cell = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (quoted) {
+      if (c !== '"') cell += c;
+      else if (text[i + 1] === '"') { cell += '"'; i++; }
+      else quoted = false;
+    } else if (c === '"' && !cell.trim()) { quoted = true; cell = ''; }
+    else if (c === delim) { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && text[i + 1] === '\n') i++;
+      row.push(cell); rows.push(row); row = []; cell = '';
+    } else cell += c;
+  }
+  row.push(cell); rows.push(row);
+  return rows.map(r => r.map(v => v.trim())).filter(r => r.some(v => v));
+}
+
+// 첫 줄이 제목 줄이면 열 이름으로 위치를 찾음 (크롬·애플 암호 등 내보내기 형식 포함)
+const COLS = {
+  name: /^(name|title|site|사이트명?|이름|제목)$/i,
+  url: /^(url|website|login_uri|주소|사이트 ?주소|링크)$/i,
+  user: /^(username|user ?name|user|id|login|login_username|email|아이디|계정)$/i,
+  pw: /^(password|pw|pass|login_password|비밀번호|비번|패스워드)$/i,
+  memo: /^(note|notes|extra|memo|메모|비고)$/i,
+};
+function rowsToItems(rows) {
+  let idx = { name: 0, url: 1, user: 2, pw: 3, memo: 4 };
+  const head = {};
+  for (const [key, re] of Object.entries(COLS)) {
+    const i = (rows[0] || []).findIndex(v => re.test(v));
+    if (i >= 0) head[key] = i;
+  }
+  if (Object.keys(head).length >= 2) { idx = head; rows = rows.slice(1); }
+  const now = Date.now();
+  return rows.map(r => {
+    const get = k => (idx[k] === undefined ? '' : r[idx[k]] || '');
+    const url = get('url') && fullUrl(get('url'));
+    return { id: crypto.randomUUID(), name: get('name') || hostOf(url), url,
+      user: get('user'), pw: get('pw'), memo: get('memo'), updated: now };
+  }).filter(it => it.name && (it.user || it.pw));
+}
+
+async function readTextFile(f) {
+  const buf = await f.arrayBuffer();
+  try { return new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+  catch { return new TextDecoder('euc-kr').decode(buf); }  // 한글 엑셀 기본 CSV
+}
+
+$('csvBtn').onclick = () => { $('csvText').value = ''; $('csvErr').textContent = ''; $('menu').close(); $('csvDialog').showModal(); };
+$('csvFileBtn').onclick = () => $('csvFile').click();
+$('csvFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (f) { $('csvText').value = await readTextFile(f); $('csvErr').textContent = ''; }
+};
+$('csvForm').onsubmit = async e => {
+  e.preventDefault();
+  const found = rowsToItems(parseCsv($('csvText').value));
+  if (!found.length) return $('csvErr').textContent = '가져올 계정이 없습니다. 한 줄에 사이트명, URL, ID, 비밀번호 순서로 적어 주세요.';
+  const seen = new Set(items.map(it => [it.name, it.user, it.pw].join('\n')));
+  const fresh = found.filter(it => !seen.has([it.name, it.user, it.pw].join('\n')));
+  const dup = found.length - fresh.length;
+  if (!fresh.length) return $('csvErr').textContent = `${dup}개 모두 이미 저장된 계정입니다.`;
+  const preview = fresh.slice(0, 3).map(it => `· ${it.name}  ${it.user}`).join('\n') + (fresh.length > 3 ? `\n· 외 ${fresh.length - 3}개` : '');
+  if (!await ask(`${fresh.length}개 계정을 추가할까요?\n\n${preview}` + (dup ? `\n\n이미 있는 ${dup}개는 건너뜁니다.` : ''), '추가')) return;
+  items.push(...fresh);
+  await persist();
+  $('csvText').value = '';
+  $('csvDialog').close(); render();
+  toast(`${fresh.length}개 추가했습니다`);
+};
 
 // ---------- 설정 메뉴 ----------
 $('menuBtn').onclick = () => { $('favToggle').checked = favOn(); $('menu').showModal(); };
