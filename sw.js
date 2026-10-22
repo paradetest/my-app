@@ -1,5 +1,5 @@
 // 앱 파일은 네트워크 우선(오프라인이면 캐시), 파비콘은 캐시 우선
-const CACHE = 'vault-v1';
+const CACHE = 'vault-v2';
 const ICONS = 'vault-favicons';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 
@@ -19,12 +19,15 @@ self.addEventListener('fetch', e => {
   const url = new URL(req.url);
 
   if (url.origin === location.origin) {
+    // 서버에 파일이 없거나(사이트 삭제 등) 오프라인이면 저장해 둔 사본으로 실행
+    const fromCache = () => caches.match(req).then(r => r || caches.match('./index.html'));
     e.respondWith(fetch(req)
       .then(res => {
-        if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
+        if (!res.ok) return fromCache().then(r => r || res);
+        const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy));
         return res;
       })
-      .catch(() => caches.match(req).then(r => r || caches.match('./index.html'))));
+      .catch(fromCache));
     return;
   }
 
