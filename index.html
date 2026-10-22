@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f6feb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="내 계정">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<title>내 계정</title>
+<style>
+  :root {
+    --bg: #f2f2f7; --card: #ffffff; --text: #1c1c1e; --sub: #6e6e73;
+    --line: #e5e5ea; --accent: #1f6feb; --danger: #e5484d; --input: #f2f2f7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #000000; --card: #1c1c1e; --text: #f2f2f7; --sub: #98989f;
+      --line: #2c2c2e; --accent: #4c8dff; --danger: #ff6b6b; --input: #2c2c2e; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #000000; --card: #1c1c1e; --text: #f2f2f7; --sub: #98989f;
+    --line: #2c2c2e; --accent: #4c8dff; --danger: #ff6b6b; --input: #2c2c2e; color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+  body { padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); min-height: 100vh; }
+  .hidden { display: none !important; }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; }
+  input, textarea { font: inherit; color: var(--text); background: var(--input); border: 1px solid transparent;
+    border-radius: 10px; padding: 12px; width: 100%; outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 70px; }
+  .btn { display: block; width: 100%; padding: 13px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; }
+  .btn.ghost { background: var(--input); color: var(--text); }
+  .btn.danger { background: transparent; color: var(--danger); }
+  .btn:disabled { opacity: .6; }
+
+  /* 잠금 / 설정 화면 */
+  .gate { max-width: 380px; margin: 0 auto; padding: 18vh 20px 40px; text-align: center; }
+  .gate img { width: 72px; height: 72px; border-radius: 16px; }
+  .gate h1 { font-size: 24px; margin: 14px 0 6px; }
+  .gate p { color: var(--sub); margin: 0 0 22px; font-size: 14px; }
+  .gate input { margin-bottom: 10px; text-align: center; background: var(--card); border-color: var(--line);
+    font-size: 24px; letter-spacing: .5em; text-indent: .5em; }
+  .gate input::placeholder { font-size: 16px; letter-spacing: normal; }
+  .err { color: var(--danger); font-size: 14px; min-height: 20px; margin: 4px 0 10px; }
+  .hint { background: var(--card); border-radius: 12px; padding: 12px; font-size: 13px; color: var(--sub); margin-top: 22px; text-align: left; }
+
+  /* 메인 */
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 10px 16px 8px; }
+  .bar { display: flex; align-items: center; justify-content: space-between; }
+  .bar h1 { font-size: 28px; margin: 0; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
+  .icon-btn svg { width: 22px; height: 22px; }
+  #search { margin-top: 8px; padding: 10px 12px; background: var(--card); }
+  main { padding: 4px 16px 110px; max-width: 640px; margin: 0 auto; }
+  .list { background: var(--card); border-radius: 14px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+  .row:last-child { border-bottom: 0; }
+  .row .info { flex: 1; min-width: 0; cursor: pointer; }
+  .row .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .user { color: var(--sub); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip { padding: 6px 10px; border-radius: 8px; background: var(--input); color: var(--accent); font-size: 13px; font-weight: 600; white-space: nowrap; }
+  .fav { width: 36px; height: 36px; flex: none; border-radius: 9px; display: grid; place-items: center;
+    color: #fff; font-weight: 700; font-size: 16px; overflow: hidden; }
+  .fav img { width: 24px; height: 24px; }
+  .fav.big { width: 56px; height: 56px; border-radius: 14px; font-size: 24px; margin: 0 auto 8px; }
+  .fav.big img { width: 36px; height: 36px; }
+  .empty { text-align: center; color: var(--sub); padding: 50px 20px; }
+  .count { color: var(--sub); font-size: 13px; margin: 8px 4px; }
+  .fab { position: fixed; right: 20px; bottom: calc(24px + env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 50%;
+    background: var(--accent); color: #fff; font-size: 32px; line-height: 1; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+
+  /* 시트(대화상자) */
+  dialog { border: 0; padding: 0; width: min(100%, 520px); max-height: 92vh; border-radius: 18px 18px 0 0;
+    margin: auto auto 0; background: var(--card); color: var(--text); }
+  @media (min-width: 600px) { dialog { border-radius: 18px; margin: auto; } }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  .sheet { padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sheet-head h2 { font-size: 17px; margin: 0; }
+  .sheet-head button { color: var(--accent); padding: 6px; }
+  .sheet-head .save { font-weight: 700; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 13px; color: var(--sub); margin: 0 4px 4px; }
+  .with-btns { display: flex; gap: 6px; }
+  .with-btns input { flex: 1; min-width: 0; }
+  .with-btns .chip { padding: 0 12px; }
+  .url-link { flex: 1; min-width: 0; padding: 12px; border-radius: 10px; background: var(--input); color: var(--accent);
+    text-decoration: underline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .menu { background: var(--input); border-radius: 14px; overflow: hidden; margin-bottom: 14px; }
+  .menu > * { display: flex; justify-content: space-between; align-items: center; width: 100%; text-align: left; padding: 14px; border-bottom: 1px solid var(--line); }
+  .menu > *:last-child { border-bottom: 0; }
+  .menu .danger { color: var(--danger); }
+  .menu small { color: var(--sub); }
+  .stack > * + * { margin-top: 8px; }
+
+  #toast { position: fixed; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: rgba(40,40,40,.92); color: #fff; padding: 10px 16px; border-radius: 20px; font-size: 14px;
+    opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 10; white-space: nowrap; }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- 처음 설정 -->
+<section id="setup" class="gate hidden">
+  <img src="icon-192.png" alt="">
+  <h1>비밀번호 만들기</h1>
+  <p>모든 계정 정보는 이 비밀번호로 암호화되어<br>이 기기에만 저장됩니다.</p>
+  <form id="setupForm">
+    <input id="setupPw" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" required>
+    <input id="setupPw2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="한 번 더 입력" autocomplete="new-password" required>
+    <div class="err" id="setupErr"></div>
+    <button class="btn" type="submit">시작하기</button>
+  </form>
+  <div class="hint">⚠️ 비밀번호를 잊으면 <b>복구할 방법이 없습니다.</b> 꼭 기억해 두세요.</div>
+  <div class="hint hidden" id="installHint">📱 사파리 하단의 <b>공유 버튼 → "홈 화면에 추가"</b>를 누른 다음, 홈 화면 아이콘으로 실행해서 설정하세요. 아이폰은 사파리 탭과 홈 화면 앱의 저장소를 따로 씁니다.</div>
+</section>
+
+<!-- 잠금 화면 -->
+<section id="lock" class="gate hidden">
+  <img src="icon-192.png" alt="">
+  <h1>내 계정</h1>
+  <p>비밀번호를 입력하세요</p>
+  <form id="unlockForm">
+    <input id="unlockPw" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" required>
+    <div class="err" id="unlockErr"></div>
+    <button class="btn" id="unlockBtn" type="submit">잠금 해제</button>
+  </form>
+</section>
+
+<!-- 메인 -->
+<section id="app" class="hidden">
+  <header>
+    <div class="bar">
+      <button class="icon-btn" id="menuBtn" aria-label="설정">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h1>내 계정</h1>
+      <button class="icon-btn" id="lockBtn" aria-label="잠그기">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </button>
+    </div>
+    <input id="search" type="search" placeholder="검색 (사이트명, URL, ID)" autocomplete="off">
+  </header>
+  <main>
+    <div class="count" id="count"></div>
+    <div class="list" id="list"></div>
+    <div class="empty hidden" id="empty">저장된 계정이 없습니다.<br>오른쪽 아래 <b>+</b> 버튼으로 추가하세요.</div>
+  </main>
+  <button class="fab" id="addBtn" aria-label="추가">+</button>
+</section>
+
+<!-- 계정 편집 -->
+<dialog id="editor">
+  <form class="sheet" id="editForm" method="dialog">
+    <div class="sheet-head">
+      <button type="button" data-close>취소</button>
+      <h2 id="editTitle">새 계정</h2>
+      <button type="submit" class="save">저장</button>
+    </div>
+    <div id="editFav"></div>
+    <div class="field"><label for="fName">사이트명</label><input id="fName" required autocomplete="off"></div>
+    <div class="field"><label for="fUrl">URL</label>
+      <div class="with-btns" id="urlView"><a class="url-link" id="urlLink" target="_blank" rel="noopener noreferrer"></a>
+        <button type="button" class="chip" id="editUrl">수정</button></div>
+      <input id="fUrl" type="text" inputmode="url" placeholder="예: naver.com" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+    <div class="field"><label for="fUser">ID</label>
+      <div class="with-btns"><input id="fUser" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="button" class="chip" data-copy="fUser">복사</button></div></div>
+    <div class="field"><label for="fPw">비밀번호</label>
+      <div class="with-btns"><input id="fPw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+        <button type="button" class="chip" id="convertPw">변환</button>
+        <button type="button" class="chip" id="togglePw">보기</button>
+        <button type="button" class="chip" data-copy="fPw">복사</button></div></div>
+    <div class="field"><label for="fMemo">메모</label><textarea id="fMemo"></textarea></div>
+    <button type="button" class="btn danger" id="deleteBtn">이 계정 삭제</button>
+  </form>
+</dialog>
+
+<!-- 설정 메뉴 -->
+<dialog id="menu">
+  <div class="sheet">
+    <div class="sheet-head"><span></span><h2>설정</h2><button type="button" data-close>닫기</button></div>
+    <div class="menu">
+      <label>파비콘 표시 <input type="checkbox" id="favToggle" style="width:auto"></label>
+    </div>
+    <div class="menu">
+      <button id="exportBtn">백업 파일 내보내기 <small>암호화됨</small></button>
+      <button id="importBtn">백업 파일 가져오기</button>
+      <button id="changePwBtn">비밀번호 변경</button>
+    </div>
+    <div class="menu">
+      <button id="resetBtn" class="danger">모든 데이터 삭제</button>
+    </div>
+    <p style="color:var(--sub);font-size:12px;margin:0 4px">파비콘을 표시하면 사이트 도메인 이름이 아이콘 서비스(DuckDuckGo, Google)로 전송됩니다. ID와 비밀번호는 어디로도 전송되지 않습니다.</p>
+    <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+  </div>
+</dialog>
+
+<!-- 비밀번호 입력 -->
+<dialog id="pwDialog">
+  <form class="sheet" id="pwForm" method="dialog">
+    <div class="sheet-head">
+      <button type="button" data-close>취소</button>
+      <h2 id="pwTitle"></h2>
+      <button type="submit" class="save">확인</button>
+    </div>
+    <div class="stack">
+      <input id="pwA" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off">
+      <input id="pwB" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="한 번 더 입력" autocomplete="off">
+    </div>
+    <div class="err" id="pwErr"></div>
+  </form>
+</dialog>
+
+<!-- 확인 -->
+<dialog id="askDialog">
+  <form class="sheet" id="askForm" method="dialog">
+    <p id="askMsg" style="margin:6px 4px 16px;white-space:pre-line"></p>
+    <div class="stack">
+      <button type="submit" class="btn" id="askOk">확인</button>
+      <button type="button" class="btn ghost" data-close>취소</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast"></div>
+
+<script>
+'use strict';
+const STORE = 'vault.v1';
+const FAV_KEY = 'vault.favicons';
+const ITER = 600000;          // PBKDF2 반복 횟수
+const AUTO_LOCK_MS = 60000;   // 앱을 벗어난 뒤 자동 잠금까지
+const IDLE_LOCK_MS = 5 * 60000;
+
+const $ = id => document.getElementById(id);
+const enc = new TextEncoder(), dec = new TextDecoder();
+
+let session = null;  // { key, salt, iter }
+let items = [];
+let editingId = null;
+let draft = null;    // 잠금 때 열려 있던 편집 내용 (메모리에만 보관)
+
+// ---------- 저장소 ----------
+function load(key) { try { return localStorage.getItem(key); } catch { return null; } }
+function save(key, val) { localStorage.setItem(key, val); }
+function favOn() { return load(FAV_KEY) !== 'off'; }
+
+// ---------- 암호화 ----------
+function b64(u8) { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); }
+function unb64(s) { return Uint8Array.from(atob(s), c => c.charCodeAt(0)); }
+
+async function deriveKey(pw, salt, iter) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' },
+    base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+}
+async function seal(s, data) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, s.key, enc.encode(JSON.stringify(data))));
+  return { v: 1, iter: s.iter, salt: b64(s.salt), iv: b64(iv), ct: b64(ct) };
+}
+async function unseal(blob, pw) {
+  const salt = unb64(blob.salt);
+  const key = await deriveKey(pw, salt, blob.iter);
+  const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: unb64(blob.iv) }, key, unb64(blob.ct));
+  return { session: { key, salt, iter: blob.iter }, data: JSON.parse(dec.decode(pt)) };
+}
+async function newSession(pw) {
+  const salt = crypto.getRandomValues(new Uint8Array(16));
+  return { key: await deriveKey(pw, salt, ITER), salt, iter: ITER };
+}
+async function persist() {
+  save(STORE, JSON.stringify(await seal(session, { items })));
+}
+
+// ---------- 화면 전환 ----------
+function show(id) {
+  for (const s of ['setup', 'lock', 'app']) $(s).classList.toggle('hidden', s !== id);
+}
+function currentDraft() {
+  return { id: editingId, name: $('fName').value, url: $('fUrl').value,
+    user: $('fUser').value, pw: $('fPw').value, memo: $('fMemo').value };
+}
+function lock() {
+  if ($('editor').open) draft = currentDraft();
+  session = null; items = [];
+  for (const d of document.querySelectorAll('dialog[open]')) d.close();
+  $('list').replaceChildren();
+  $('unlockPw').value = ''; $('unlockErr').textContent = '';
+  show('lock');
+}
+function start() {
+  const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  $('installHint').classList.toggle('hidden', standalone);
+  load(STORE) ? lock() : show('setup');
+}
+
+$('setupForm').onsubmit = async e => {
+  e.preventDefault();
+  const pw = $('setupPw').value, pw2 = $('setupPw2').value;
+  if (!isPin(pw)) return $('setupErr').textContent = '비밀번호를 끝까지 입력하세요.';
+  if (pw !== pw2) return $('setupErr').textContent = '비밀번호가 일치하지 않습니다.';
+  session = await newSession(pw);
+  items = [];
+  await persist();
+  $('setupPw').value = $('setupPw2').value = '';
+  navigator.storage?.persist?.();
+  openApp();
+};
+
+function isPin(v) { return /^[0-9]{4}$/.test(v); }
+
+let failures = 0, waitUntil = 0;
+$('unlockPw').oninput = () => {
+  $('unlockPw').value = $('unlockPw').value.replace(/[^0-9]/g, '');
+  if (isPin($('unlockPw').value)) $('unlockForm').requestSubmit();
+};
+$('unlockForm').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('unlockBtn');
+  if (btn.disabled) return;
+  const wait = Math.ceil((waitUntil - Date.now()) / 1000);
+  if (wait > 0) { $('unlockErr').textContent = `${wait}초 후에 다시 시도하세요.`; $('unlockPw').value = ''; return; }
+  btn.disabled = true; btn.textContent = '확인 중...';
+  try {
+    const r = await unseal(JSON.parse(load(STORE)), $('unlockPw').value);
+    session = r.session; items = r.data.items || [];
+    failures = 0;
+    $('unlockPw').value = '';
+    openApp();
+  } catch {
+    failures++;
+    if (failures >= 5) { waitUntil = Date.now() + 30000; failures = 0; $('unlockErr').textContent = '5번 틀렸습니다. 30초 후에 다시 시도하세요.'; }
+    else $('unlockErr').textContent = `비밀번호가 틀렸습니다. (${failures}/5)`;
+    $('unlockPw').value = '';
+  } finally {
+    btn.disabled = false; btn.textContent = '잠금 해제';
+  }
+};
+
+function openApp() {
+  $('search').value = ''; render(); show('app');
+  if (draft) { const d = draft; draft = null; openEditor(d.id, d); toast('작성 중이던 내용을 복원했습니다'); }
+}
+
+// ---------- 파비콘 ----------
+function hostOf(url) {
+  if (!url) return '';
+  try { return new URL(/^[a-z]+:\/\//i.test(url) ? url : 'https://' + url).hostname; } catch { return ''; }
+}
+function colorFor(str) {
+  let h = 0; for (const c of str) h = (h * 31 + c.codePointAt(0)) % 360;
+  return `hsl(${h} 55% 50%)`;
+}
+function favicon(item, big) {
+  const box = document.createElement('div');
+  box.className = 'fav' + (big ? ' big' : '');
+  const label = (item.name || '?').trim();
+  box.textContent = [...label][0]?.toUpperCase() || '?';
+  box.style.background = colorFor(label);
+  const host = hostOf(item.url) || (/^[\w-]+(\.[\w-]+)+$/.test(label) ? label : '');
+  if (host && favOn()) {
+    const srcs = [`https://icons.duckduckgo.com/ip3/${host}.ico`, `https://www.google.com/s2/favicons?domain=${host}&sz=64`];
+    const img = new Image();
+    img.alt = ''; img.referrerPolicy = 'no-referrer';
+    let i = 0;
+    const next = () => { if (i < srcs.length) img.src = srcs[i++]; };
+    img.onerror = next;
+    img.onload = () => {
+      if (img.naturalWidth <= 1) return next();
+      box.textContent = ''; box.style.background = '#fff'; box.append(img);
+    };
+    next();
+  }
+  return box;
+}
+
+// ---------- 목록 ----------
+function render() {
+  const q = $('search').value.trim().toLowerCase();
+  const shown = items
+    .filter(it => !q || [it.name, it.url, it.user].some(v => (v || '').toLowerCase().includes(q)))
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  const list = $('list');
+  list.replaceChildren(...shown.map(it => {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const info = document.createElement('div');
+    info.className = 'info';
+    const name = document.createElement('div'); name.className = 'name'; name.textContent = it.name;
+    const user = document.createElement('div'); user.className = 'user'; user.textContent = it.user || hostOf(it.url) || ' ';
+    info.append(name, user);
+    info.onclick = () => openEditor(it.id);
+    const copyId = document.createElement('button'); copyId.className = 'chip'; copyId.textContent = 'ID';
+    copyId.onclick = () => copy(it.user, 'ID');
+    const copyPw = document.createElement('button'); copyPw.className = 'chip'; copyPw.textContent = 'PW';
+    copyPw.onclick = () => copy(it.pw, '비밀번호');
+    const fav = favicon(it); fav.onclick = info.onclick;
+    row.append(fav, info, copyId, copyPw);
+    return row;
+  }));
+  list.classList.toggle('hidden', !shown.length);
+  $('empty').classList.toggle('hidden', items.length > 0);
+  $('count').textContent = items.length ? (q ? `${shown.length} / ${items.length}개` : `${items.length}개`) : '';
+}
+$('search').oninput = render;
+
+// ---------- 편집 ----------
+function openEditor(id, draft) {
+  editingId = id;
+  const it = draft || items.find(x => x.id === id) || { name: '', url: '', user: '', pw: '', memo: '' };
+  $('editTitle').textContent = id ? '계정 편집' : '새 계정';
+  $('fName').value = it.name; $('fUrl').value = it.url; $('fUser').value = it.user;
+  $('fPw').value = it.pw; $('fMemo').value = it.memo;
+  $('fPw').type = 'password'; $('togglePw').textContent = '보기';
+  $('deleteBtn').classList.toggle('hidden', !id);
+  updateEditFav(it);
+  showUrl(id && !draft ? it.url : '');
+  $('editor').showModal();
+  if (!id) $('fName').focus();
+}
+function updateEditFav(it) {
+  $('editFav').replaceChildren(favicon({ name: it.name || '?', url: it.url }, true));
+}
+
+$('editForm').onsubmit = async e => {
+  e.preventDefault();
+  const data = {
+    name: $('fName').value.trim(), url: $('fUrl').value.trim() && fullUrl($('fUrl').value.trim()), user: $('fUser').value,
+    pw: $('fPw').value, memo: $('fMemo').value, updated: Date.now(),
+  };
+  if (!data.name) return $('fName').focus();
+  if (editingId) Object.assign(items.find(x => x.id === editingId), data);
+  else items.push({ id: crypto.randomUUID(), ...data });
+  await persist();
+  $('editor').close(); render(); toast('저장했습니다');
+};
+$('deleteBtn').onclick = async () => {
+  if (!await ask('이 계정을 삭제할까요?', '삭제', true)) return;
+  items = items.filter(x => x.id !== editingId);
+  await persist();
+  $('editor').close(); render(); toast('삭제했습니다');
+};
+$('togglePw').onclick = () => {
+  const show = $('fPw').type === 'password';
+  $('fPw').type = show ? 'text' : 'password';
+  $('togglePw').textContent = show ? '숨김' : '보기';
+};
+
+// ---------- URL ----------
+function fullUrl(url) { return /^[a-z][a-z\d+.-]*:\/\//i.test(url) ? url : 'https://' + url; }
+function showUrl(url) {
+  const asLink = !!url;
+  $('urlView').classList.toggle('hidden', !asLink);
+  $('fUrl').classList.toggle('hidden', asLink);
+  if (asLink) { $('urlLink').href = fullUrl(url); $('urlLink').textContent = url; }
+}
+$('editUrl').onclick = () => { showUrl(''); $('fUrl').focus(); };
+// ---------- 한글 → 영문 자판 변환 (두벌식) ----------
+const KEY = {
+  ㄱ: 'r', ㄲ: 'R', ㄴ: 's', ㄷ: 'e', ㄸ: 'E', ㄹ: 'f', ㅁ: 'a', ㅂ: 'q', ㅃ: 'Q', ㅅ: 't', ㅆ: 'T',
+  ㅇ: 'd', ㅈ: 'w', ㅉ: 'W', ㅊ: 'c', ㅋ: 'z', ㅌ: 'x', ㅍ: 'v', ㅎ: 'g',
+  ㄳ: 'rt', ㄵ: 'sw', ㄶ: 'sg', ㄺ: 'fr', ㄻ: 'fa', ㄼ: 'fq', ㄽ: 'ft', ㄾ: 'fx', ㄿ: 'fv', ㅀ: 'fg', ㅄ: 'qt',
+  ㅏ: 'k', ㅐ: 'o', ㅑ: 'i', ㅒ: 'O', ㅓ: 'j', ㅔ: 'p', ㅕ: 'u', ㅖ: 'P', ㅗ: 'h', ㅘ: 'hk', ㅙ: 'ho', ㅚ: 'hl',
+  ㅛ: 'y', ㅜ: 'n', ㅝ: 'nj', ㅞ: 'np', ㅟ: 'nl', ㅠ: 'b', ㅡ: 'm', ㅢ: 'ml', ㅣ: 'l',
+};
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+const JUNG = 'ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ';
+const JONG = ['', ...'ㄱㄲㄳㄴㄵㄶㄷㄹㄺㄻㄼㄽㄾㄿㅀㅁㅂㅄㅅㅆㅇㅈㅊㅋㅌㅍㅎ'];
+function hangulToKeys(text) {
+  let out = '';
+  for (const ch of text) {
+    const code = ch.charCodeAt(0) - 0xAC00;
+    if (code >= 0 && code < 11172) {
+      out += KEY[CHO[Math.floor(code / 588)]] + KEY[JUNG[Math.floor(code % 588 / 28)]] + (KEY[JONG[code % 28]] || '');
+    } else out += KEY[ch] || ch;
+  }
+  return out;
+}
+$('convertPw').onclick = () => {
+  const v = $('fPw').value, c = hangulToKeys(v);
+  if (c === v) return toast('변환할 한글이 없습니다');
+  $('fPw').value = c;
+  $('fPw').type = 'text'; $('togglePw').textContent = '숨김';
+  toast('영문 자판으로 변환했습니다');
+};
+
+for (const b of document.querySelectorAll('[data-copy]'))
+  b.onclick = () => copy($(b.dataset.copy).value, b.dataset.copy === 'fPw' ? '비밀번호' : 'ID');
+for (const b of document.querySelectorAll('[data-close]'))
+  b.onclick = () => b.closest('dialog').close();
+
+// ---------- 복사 / 알림 ----------
+async function copy(text, label) {
+  if (!text) return toast(`${label}가 비어 있습니다`);
+  try { await navigator.clipboard.writeText(text); }
+  catch {
+    const t = document.createElement('textarea');
+    t.value = text; t.style.position = 'fixed'; t.style.opacity = '0';
+    document.body.append(t); t.select(); document.execCommand('copy'); t.remove();
+  }
+  toast(`${label} 복사됨`);
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+}
+
+// ---------- 확인 대화상자 ----------
+function ask(msg, okLabel = '확인', danger = false) {
+  return new Promise(resolve => {
+    const d = $('askDialog');
+    let ok = false;
+    $('askMsg').textContent = msg; $('askOk').textContent = okLabel;
+    $('askOk').style.background = danger ? 'var(--danger)' : '';
+    $('askForm').onsubmit = e => { e.preventDefault(); ok = true; d.close(); };
+    d.onclose = () => resolve(ok);
+    d.showModal();
+  });
+}
+
+// ---------- 비밀번호 입력 대화상자 ----------
+function askPassword(title, { confirm2 = false, placeholder = '비밀번호' } = {}) {
+  return new Promise(resolve => {
+    const d = $('pwDialog');
+    $('pwTitle').textContent = title;
+    $('pwA').value = $('pwB').value = ''; $('pwA').placeholder = placeholder;
+    $('pwB').classList.toggle('hidden', !confirm2);
+    $('pwErr').textContent = '';
+    let result = null;
+    $('pwForm').onsubmit = e => {
+      e.preventDefault();
+      const a = $('pwA').value;
+      if (!isPin(a)) return $('pwErr').textContent = '비밀번호를 끝까지 입력하세요.';
+      if (confirm2 && a !== $('pwB').value) return $('pwErr').textContent = '비밀번호가 일치하지 않습니다.';
+      result = a; d.close();
+    };
+    d.onclose = () => resolve(result);
+    d.showModal(); $('pwA').focus();
+  });
+}
+
+// ---------- 설정 메뉴 ----------
+$('menuBtn').onclick = () => { $('favToggle').checked = favOn(); $('menu').showModal(); };
+$('lockBtn').onclick = lock;
+$('addBtn').onclick = () => openEditor(null);
+$('favToggle').onchange = e => { save(FAV_KEY, e.target.checked ? 'on' : 'off'); render(); };
+
+$('exportBtn').onclick = async () => {
+  const name = `계정백업-${new Date().toISOString().slice(0, 10)}.json`;
+  const file = new File([load(STORE)], name, { type: 'application/json' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); } catch {}
+  } else {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(file); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+};
+
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  let blob;
+  try { blob = JSON.parse(await f.text()); if (!blob.ct) throw 0; }
+  catch { return toast('올바른 백업 파일이 아닙니다'); }
+  const pw = await askPassword('백업 파일 비밀번호', { placeholder: '백업할 때의 비밀번호' });
+  if (!pw) return;
+  let data;
+  try { data = (await unseal(blob, pw)).data; }
+  catch { return toast('백업 비밀번호가 틀렸습니다'); }
+  let added = 0, updated = 0;
+  for (const it of data.items || []) {
+    const cur = items.find(x => x.id === it.id);
+    if (!cur) { items.push(it); added++; }
+    else if ((it.updated || 0) > (cur.updated || 0)) { Object.assign(cur, it); updated++; }
+  }
+  await persist(); render(); $('menu').close();
+  toast(`추가 ${added}개 · 갱신 ${updated}개`);
+};
+
+$('changePwBtn').onclick = async () => {
+  const pw = await askPassword('새 비밀번호', { confirm2: true, placeholder: '' });
+  if (!pw) return;
+  session = await newSession(pw);
+  await persist(); $('menu').close();
+  toast('비밀번호를 변경했습니다');
+};
+
+$('resetBtn').onclick = async () => {
+  if (!await ask('저장된 모든 계정을 삭제합니다.\n되돌릴 수 없습니다. 계속할까요?', '계속', true)) return;
+  if (!await ask('정말 삭제할까요? 백업하지 않은 계정은 모두 사라집니다.', '모두 삭제', true)) return;
+  localStorage.removeItem(STORE);
+  location.reload();
+};
+
+// ---------- 자동 잠금 ----------
+let hiddenAt = 0, idleTimer;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) hiddenAt = Date.now();
+  else if (session && Date.now() - hiddenAt > AUTO_LOCK_MS) lock();
+});
+function resetIdle() { clearTimeout(idleTimer); idleTimer = setTimeout(() => session && lock(), IDLE_LOCK_MS); }
+for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, resetIdle, { passive: true });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+start();
+</script>
+</body>
+</html>
